@@ -303,3 +303,4 @@ Init: n=360; t=0; freq=174;
 Frame: t=t+0.02; freq=174+789*frac(t/10);
 Beat:
 Point: r=i*$PI*2; d=0.35+0.05*sin(freq*t+r*freq); x=cos(r)*d; y=sin(r)*d; red=0.5+0.5*sin(r*freq); green=0.5+0.5*sin(r*freq+2.094); blue=0.5+0.5*sin(r*freq+4.188); linesize=1;
+
