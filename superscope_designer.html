@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Superscope Designer</title>
 <style>
+#shape-select { width: 250px; }
 body { font-family: Arial, sans-serif; margin: 20px; }
 label { display: inline-block; width: 60px; }
 textarea { width: 100%; height: 60px; }
@@ -175,8 +176,9 @@ function loadShape() {
   if (!s) return;
   document.getElementById('init').value = s.init;
   document.getElementById('frame').value = s.frame;
-  document.getElementById('beat').value = s.beat;
-  document.getElementById('point').value = s.point;
+  const w = window.open('about:blank', 'preview', 'width=600,height=600,resizable=yes');
+  w.document.close();
+document.addEventListener('DOMContentLoaded', populate);
 }
 function addShape() {
   const name = document.getElementById('new-name').value.trim();
