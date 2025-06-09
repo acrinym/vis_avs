@@ -104,7 +104,6 @@ const shapes = {
     beat: "",
     point: "r=i*$PI*4; x=cos(r)*0.5; y=sin(r)*0.5*sin(t);"
   },
-
   "Rainbow Sphere Grid": {
     init: "n=700; t=0; phase=0;",
     frame: "t=t+0.04; phase=phase+0.02;",
@@ -140,7 +139,6 @@ const shapes = {
     frame: "t=t+0.02;",
     beat: "",
     point: "s=floor(i*6); p=frac(i*6); s==0?(x=0.2*cos(p*$PI); y=0.15*sin(p*$PI)):s==1?(x=-0.2*sin(p*$PI); y=0.25*cos(p*$PI)+0.1):s==2?(x=0.2*sin(p*$PI); y=0.25*cos(p*$PI)+0.1):s==3?(x=-0.13; y=0.3*p-0.15):s==4?(x=0; y=0.3*p-0.15):(x=0.13; y=0.3*p-0.15); red=1; green=0.8; blue=0.2; linesize=1;"
-
   },
   "Pong Simulation": {
     init: "n=120; px=0; py=0; vx=0.02; vy=0.015; t=0; pyL=0; pyR=0;",
@@ -226,9 +224,7 @@ const shapes = {
     beat: "",
     point: "r=i*$PI*2; d=0.35+0.05*sin(freq*t+r*freq); x=cos(r)*d; y=sin(r)*d; red=0.5+0.5*sin(r*freq); green=0.5+0.5*sin(r*freq+2.094); blue=0.5+0.5*sin(r*freq+4.188); linesize=1;"
   },
-
-  }
-
+    {
 };
 function populate() {
   const sel = document.getElementById('shape-select');
@@ -309,13 +305,15 @@ function openPreview() {
   }
   setup(); update(); setInterval(update,500); animate();
   <\/script></html>`);
+  w.document.close();
+}
+document.addEventListener('DOMContentLoaded', populate);
 
   w.document.close();
 }
 document.addEventListener('DOMContentLoaded', populate);
 
 }
-window.onload = populate;
 
 </script>
 </body>
