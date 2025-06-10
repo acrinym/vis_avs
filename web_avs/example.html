@@ -18,14 +18,24 @@
       beat: '',
       point: 'r=i*6.283; x=cos(r)*0.5; y=sin(r)*0.5;'
     };
+    let avs;
     window.addEventListener('DOMContentLoaded', () => {
       const container = document.getElementById('container');
-      const avs = new WebAVS({ audioElement: audio, container, preset });
+      avs = new WebAVS({ audioElement: audio, container, preset });
       avs.start();
+      document.getElementById('presetfile').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) avs.loadPresetFromBlob(file);
+      });
+      document.getElementById('save').addEventListener('click', () => {
+        avs.savePreset();
+      });
     });
   </script>
 </head>
 <body>
+  <input type="file" id="presetfile" />
+  <button id="save">Save preset</button>
   <div id="container"></div>
 </body>
 </html>

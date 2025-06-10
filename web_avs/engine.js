@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+const textDecoder = new TextDecoder();
+const textEncoder = new TextEncoder();
+
 export class WebAVS {
   constructor({ audioElement, container, preset }) {
     this.audioElement = audioElement;
@@ -79,5 +82,50 @@ export class WebAVS {
 
   stop() {
     cancelAnimationFrame(this.animationId);
+  }
+
+  /**
+   * Load a preset from a File or ArrayBuffer.
+   * Only simple JSON presets are fully supported. Legacy
+   * binary files will attempt to parse the first ASCII block
+   * for Superscope expressions.
+   */
+  async loadPresetFromBlob(blob) {
+    const arrayBuffer = blob instanceof ArrayBuffer ? blob : await blob.arrayBuffer();
+    let text;
+    try {
+      text = textDecoder.decode(arrayBuffer);
+      this.setPreset(JSON.parse(text));
+      return;
+    } catch (e) {
+      // not JSON; fall through
+    }
+    // naive legacy parser: extract ASCII strings
+    const str = textDecoder.decode(arrayBuffer).replace(/\0/g, '');
+    const parts = str.split(';');
+    if (parts.length >= 4) {
+      this.setPreset({
+        init: parts[3] + ';',
+        beat: parts[2] + ';',
+        frame: parts[1] + ';',
+        point: parts[0] + ';',
+      });
+    } else {
+      console.warn('Unsupported preset format');
+    }
+  }
+
+  /**
+   * Export current preset as a JSON file and trigger download.
+   */
+  savePreset(filename = 'preset.json') {
+    const json = JSON.stringify(this.preset, null, 2);
+    const blob = new Blob([textEncoder.encode(json)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }

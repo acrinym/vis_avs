@@ -19,5 +19,8 @@ AVS style shapes.
    appear.
 4. Initialise `WebAVS` with a preset containing `init`, `frame`, `beat`
    and `point` expressions (similar to the original AVS Superscope).
+5. Call `loadPresetFromBlob()` to open a preset file (JSON or very
+   simple legacy format) and `savePreset()` to download the current
+   preset.
 
 See `example.html` for a minimal integration example.
