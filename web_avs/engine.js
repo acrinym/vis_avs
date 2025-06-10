@@ -17,6 +17,8 @@ export class WebAVS {
     this.analyser = this.audioContext.createAnalyser();
     this.source.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
+    this.analyser.fftSize = 1024;
+    this.audioData = new Uint8Array(this.analyser.fftSize);
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, this.container.clientWidth / this.container.clientHeight, 0.1, 1000);
@@ -59,6 +61,14 @@ export class WebAVS {
   update() {
     if (this.preset.frame) {
       this.run(this.preset.frame);
+    }
+    if (this.analyser && this.audioData) {
+      this.analyser.getByteTimeDomainData(this.audioData);
+      let sum = 0;
+      for (let i = 0; i < this.audioData.length; i++) {
+        sum += Math.abs(this.audioData[i] - 128);
+      }
+      this.vars.level = sum / (this.audioData.length * 128);
     }
     const pts = this.computePoints();
     this.geometry.setFromPoints(pts);

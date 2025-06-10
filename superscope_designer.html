@@ -65,6 +65,34 @@
       <div id="preview-container" class="card"></div>
     </div>
   </div>
+  <div class="row">
+    <div class="col s12">
+      <audio id="audio-player" controls class="" style="width:100%"></audio>
+      <div class="file-field input-field">
+        <div class="btn">
+          <span>Load Audio</span>
+          <input type="file" id="audio-file" accept="audio/*">
+        </div>
+        <div class="file-path-wrapper">
+          <input class="file-path validate" type="text" placeholder="Choose audio file">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col s12">
+      <div class="file-field input-field">
+        <div class="btn">
+          <span>Open .avs</span>
+          <input type="file" id="preset-file" accept=".avs,.json">
+        </div>
+        <div class="file-path-wrapper">
+          <input class="file-path validate" type="text" placeholder="Open preset file">
+        </div>
+      </div>
+      <button class="btn" id="save-preset">Save Preset</button>
+    </div>
+  </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
   <script type="module">
     import { WebAVS } from './web_avs/engine.js';
@@ -313,7 +341,7 @@
       populate();
       loadShape();
       const container = document.getElementById('preview-container');
-      const audio = new Audio();
+      const audio = document.getElementById('audio-player');
       avs = new WebAVS({ audioElement: audio, container });
       await avs.start();
       ['init','frame','beat','point'].forEach(id => {
@@ -321,6 +349,31 @@
       });
       document.getElementById('load-btn').addEventListener('click', loadShape);
       document.getElementById('add-btn').addEventListener('click', addShape);
+      document.getElementById('audio-file').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) {
+          const url = URL.createObjectURL(file);
+          audio.src = url;
+          audio.play();
+        }
+      });
+      document.getElementById('preset-file').addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if (file) {
+          await avs.loadPresetFromBlob(file);
+          const p = avs.preset;
+          document.getElementById('init').value = p.init || '';
+          document.getElementById('frame').value = p.frame || '';
+          document.getElementById('beat').value = p.beat || '';
+          document.getElementById('point').value = p.point || '';
+          ['init','frame','beat','point'].forEach(id => M.textareaAutoResize(document.getElementById(id)));
+          updatePreview();
+        }
+      });
+      document.getElementById('save-preset').addEventListener('click', () => {
+        avs.setPreset(getCurrentShape());
+        avs.savePreset();
+      });
     });
   </script>
 </body>
