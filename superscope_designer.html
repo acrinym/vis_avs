@@ -1,48 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Superscope Designer</title>
-<style>
-
-#shape-select { width: 250px; }
-
-body { font-family: Arial, sans-serif; margin: 20px; }
-label { display: inline-block; width: 60px; }
-textarea { width: 100%; height: 60px; }
-select, button { margin: 5px 0; }
-#shape-form { margin-top: 20px; }
-</style>
+  <meta charset="UTF-8">
+  <title>Superscope Designer</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js"
+    }
+  }
+  </script>
+  <style>
+    body { padding: 20px; }
+    #preview-container { width: 100%; height: 400px; margin-top: 20px; }
+    textarea.materialize-textarea{height:100px;}
+  </style>
 </head>
-<body>
-<h1>Superscope Designer</h1>
-<p>Select a preset shape or create your own to generate Superscope code snippets for Winamp AVS.</p>
-<select id="shape-select"></select>
-<button onclick="loadShape()">Load Shape</button>
-<form id="shape-form">
-  <div><label>Init</label><textarea id="init"></textarea></div>
-  <div><label>Frame</label><textarea id="frame"></textarea></div>
-  <div><label>Beat</label><textarea id="beat"></textarea></div>
-  <div><label>Point</label><textarea id="point"></textarea></div>
-</form>
-<button onclick="openPreview()">Open Preview</button>
-<h2>Add Custom Shape</h2>
-<input id="new-name" placeholder="Name" />
-<button onclick="addShape()">Add</button>
-<p id="status"></p>
-<h2>Conversion Explanation</h2>
-<p>Superscopes plot points over time. To convert a 2D or 3D model into a Superscope:</p>
-<ol>
-<li>Sample the model's outline or surface as a set of points.</li>
-<li>Normalize coordinates to the -1..1 range.</li>
-<li>Use trigonometric functions for curves and rotations.</li>
-<li>Write expressions for <strong>Init</strong> to set point count and variables.</li>
-<li>Use <strong>Frame</strong> to animate values each frame.</li>
-<li><strong>Beat</strong> reacts to music beats for extra motion.</li>
-<li>The <strong>Point</strong> expression outputs <code>x</code>, <code>y</code>, and optional color values per point.</li>
-</ol>
-<script>
-const shapes = {
+<body class="container">
+  <h4 class="center-align">Superscope Designer</h4>
+  <div class="row">
+    <div class="col s12 m4">
+      <div class="input-field">
+        <select id="shape-select"></select>
+        <label>Presets</label>
+      </div>
+      <button class="btn" id="load-btn">Load Shape</button>
+      <form id="shape-form">
+        <div class="input-field">
+          <textarea id="init" class="materialize-textarea"></textarea>
+          <label for="init">Init</label>
+        </div>
+        <div class="input-field">
+          <textarea id="frame" class="materialize-textarea"></textarea>
+          <label for="frame">Frame</label>
+        </div>
+        <div class="input-field">
+          <textarea id="beat" class="materialize-textarea"></textarea>
+          <label for="beat">Beat</label>
+        </div>
+        <div class="input-field">
+          <textarea id="point" class="materialize-textarea"></textarea>
+          <label for="point">Point</label>
+        </div>
+      </form>
+      <div class="input-field">
+        <input id="new-name" type="text">
+        <label for="new-name">Custom Name</label>
+      </div>
+      <button class="btn" id="add-btn">Add</button>
+      <p id="status"></p>
+      <p class="section">Superscopes plot points over time. To convert a 2D or 3D model into a Superscope:</p>
+      <ol>
+        <li>Sample the model's outline or surface as a set of points.</li>
+        <li>Normalize coordinates to the -1..1 range.</li>
+        <li>Use trigonometric functions for curves and rotations.</li>
+        <li>Write expressions for <strong>Init</strong> to set point count and variables.</li>
+        <li>Use <strong>Frame</strong> to animate values each frame.</li>
+        <li><strong>Beat</strong> reacts to music beats for extra motion.</li>
+        <li>The <strong>Point</strong> expression outputs <code>x</code>, <code>y</code> and optional color values.</li>
+      </ol>
+    </div>
+    <div class="col s12 m8">
+      <div id="preview-container" class="card"></div>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script type="module">
+    import { WebAVS } from './web_avs/engine.js';
+
+    const shapes = {
 
   "Rainbow Merkaba": {
     init: "n=720; rot=0;",
@@ -224,97 +251,77 @@ const shapes = {
     beat: "",
     point: "r=i*$PI*2; d=0.35+0.05*sin(freq*t+r*freq); x=cos(r)*d; y=sin(r)*d; red=0.5+0.5*sin(r*freq); green=0.5+0.5*sin(r*freq+2.094); blue=0.5+0.5*sin(r*freq+4.188); linesize=1;"
   },
-    {
-};
-function populate() {
-  const sel = document.getElementById('shape-select');
-  Object.keys(shapes).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; sel.appendChild(o); });
-}
-function loadShape() {
-  const name = document.getElementById('shape-select').value;
-  const s = shapes[name];
-  if (!s) return;
-  document.getElementById('init').value = s.init;
-  document.getElementById('frame').value = s.frame;
-  document.getElementById('beat').value = s.beat;
-  document.getElementById('point').value = s.point;
-}
-function addShape() {
-  const name = document.getElementById('new-name').value.trim();
-  const init = document.getElementById('init').value;
-  const frame = document.getElementById('frame').value;
-  const beat = document.getElementById('beat').value;
-  const point = document.getElementById('point').value;
-  if (!name) return;
-  shapes[name] = {init, frame, beat, point};
-  const opt = document.createElement('option');
-  opt.value = name; opt.textContent = name;
-  document.getElementById('shape-select').appendChild(opt);
-  document.getElementById('status').textContent = 'Added ' + name;
-  document.getElementById('new-name').value = '';
-}
-
-function getCurrentShape() {
-  return {
-    init: document.getElementById('init').value,
-    frame: document.getElementById('frame').value,
-    beat: document.getElementById('beat').value,
-    point: document.getElementById('point').value
   };
-}
 
-function openPreview() {
-  window.currentShapeProvider = getCurrentShape;
-  const w = window.open('about:blank', 'preview', 'width=600,height=600,resizable=yes');
-  w.document.write(`<!DOCTYPE html>
-  <html><head><title>Preview</title>
-  <style>body{margin:0;overflow:hidden}</style>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"><\/script>
-  </head><body></body>
-  <script>
-  const frac = x => x-Math.floor(x);
-  let scene,camera,renderer,pts,geom,mesh;
-  function computePoints(shape){
-    const vars={};
-    const run=c=>{with(Math){with(vars){eval(c);}}};
-    run(shape.init||'');
-    const n=vars.n||300; const arr=[];
-    for(let j=0;j<n;j++){vars.i=j/n; run(shape.point||''); arr.push(new THREE.Vector3(vars.x||0,vars.y||0,vars.z||0));}
-    return arr;
-  }
-  function setup(){
-    scene=new THREE.Scene();
-    camera=new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    renderer=new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-    geom=new THREE.BufferGeometry();
-    mesh=new THREE.Points(geom, new THREE.PointsMaterial({size:0.03,color:0xffffff}));
-    scene.add(mesh);
-    camera.position.z=2;
-  }
-  function update(){
-    const shape=window.opener.currentShapeProvider();
-    pts=computePoints(shape);
-    geom.setFromPoints(pts);
-  }
-  function animate(){
-    requestAnimationFrame(animate);
-    mesh.rotation.x+=0.01; mesh.rotation.y+=0.01;
-    renderer.render(scene,camera);
-  }
-  setup(); update(); setInterval(update,500); animate();
-  <\/script></html>`);
-  w.document.close();
-}
-document.addEventListener('DOMContentLoaded', populate);
+    let avs;
+    function populate() {
+      const sel = document.getElementById('shape-select');
+      Object.keys(shapes).forEach(k => {
+        const o = document.createElement('option');
+        o.value = k;
+        o.textContent = k;
+        sel.appendChild(o);
+      });
+      M.FormSelect.init(sel);
+      sel.selectedIndex = 0;
+    }
 
-  w.document.close();
-}
-document.addEventListener('DOMContentLoaded', populate);
+    function loadShape() {
+      const name = document.getElementById('shape-select').value;
+      const s = shapes[name];
+      if (!s) return;
+      document.getElementById('init').value = s.init;
+      document.getElementById('frame').value = s.frame;
+      document.getElementById('beat').value = s.beat;
+      document.getElementById('point').value = s.point;
+      M.textareaAutoResize(document.getElementById('init'));
+      M.textareaAutoResize(document.getElementById('frame'));
+      M.textareaAutoResize(document.getElementById('beat'));
+      M.textareaAutoResize(document.getElementById('point'));
+      updatePreview();
+    }
 
-}
+    function addShape() {
+      const name = document.getElementById('new-name').value.trim();
+      const data = getCurrentShape();
+      if (!name) return;
+      shapes[name] = data;
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      document.getElementById('shape-select').appendChild(opt);
+      document.getElementById('status').textContent = 'Added ' + name;
+      document.getElementById('new-name').value = '';
+      M.FormSelect.init(document.getElementById('shape-select'));
+    }
 
-</script>
+    function getCurrentShape() {
+      return {
+        init: document.getElementById('init').value,
+        frame: document.getElementById('frame').value,
+        beat: document.getElementById('beat').value,
+        point: document.getElementById('point').value
+      };
+    }
+
+    function updatePreview() {
+      if (!avs) return;
+      avs.setPreset(getCurrentShape());
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      populate();
+      loadShape();
+      const container = document.getElementById('preview-container');
+      const audio = new Audio();
+      avs = new WebAVS({ audioElement: audio, container });
+      await avs.start();
+      ['init','frame','beat','point'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updatePreview);
+      });
+      document.getElementById('load-btn').addEventListener('click', loadShape);
+      document.getElementById('add-btn').addEventListener('click', addShape);
+    });
+  </script>
 </body>
 </html>
