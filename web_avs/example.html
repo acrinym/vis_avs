@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Web AVS Example</title>
+  <style>
+    body { margin: 0; }
+    #container { width: 100vw; height: 100vh; }
+  </style>
+  <script type="module">
+    import { WebAVS } from './engine.js';
+    const audio = new Audio('sample.mp3');
+    audio.loop = true;
+    audio.autoplay = true;
+    const preset = {
+      init: 'n=300;',
+      frame: '',
+      beat: '',
+      point: 'r=i*6.283; x=cos(r)*0.5; y=sin(r)*0.5;'
+    };
+    let avs;
+    window.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('container');
+      avs = new WebAVS({ audioElement: audio, container, preset });
+      avs.start();
+      document.getElementById('presetfile').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) avs.loadPresetFromBlob(file);
+      });
+      document.getElementById('save').addEventListener('click', () => {
+        avs.savePreset();
+      });
+    });
+  </script>
+</head>
+<body>
+  <input type="file" id="presetfile" />
+  <button id="save">Save preset</button>
+  <div id="container"></div>
+</body>
+</html>
