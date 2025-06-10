@@ -66,6 +66,15 @@ of AVS itself there are _many_ ideas for improvement and known bugs. Have a look
 [`wishlist.txt`](wishlist.txt) for a list of issues and feature-requests, both old and
 new.
 
+## Web / JavaScript Version
+
+An experimental JavaScript implementation is included in
+[`web_avs/`](web_avs/). It renders simple superscope style presets using
+WebGL and the Web Audio API and can be embedded in any webpage or paired
+with projects like [WebAmp](https://github.com/captbaritone/webamp).
+The implementation is minimal and primarily meant for experimentation.
+See [`web_avs/README.md`](web_avs/README.md) for details.
+
 
 ## Cross-Compiling & Running on Linux & Wine
 

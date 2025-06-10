@@ -1,0 +1,10 @@
+{
+  "name": "web_avs",
+  "version": "0.1.0",
+  "description": "Minimal JavaScript port of vis_avs",
+  "main": "engine.js",
+  "type": "module",
+  "dependencies": {
+    "three": "^0.158.0"
+  }
+}

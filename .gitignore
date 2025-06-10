@@ -24,6 +24,7 @@ winedbg_history
 /ResourceHacker*
 /*.exe
 /*test*
+node_modules/
 
 # syncthing
 .stfolder/
