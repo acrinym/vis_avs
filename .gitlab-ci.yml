@@ -1,21 +1,54 @@
-image: gcc:9
+stages:
+  - prepare
+  - build
 
-build:
-  stage: build
-  before_script:
-    - >
-      apt update &&
-      apt -y install
-      gcc-mingw-w64 g++-mingw-w64 cmake make
-      libavformat-dev libavcodec-dev libswscale-dev
+
+build-ci-image:
+  image: docker
+  stage: prepare
+  services:
+    - name: docker:dind
   script:
-    - mkdir -p build
-    - cd build
-    - cmake -D CMAKE_TOOLCHAIN_FILE=../CMake-MingWcross-toolchain.txt ..
-    - make
-  artifacts:
-    paths:
-      - build/vis_avs.dll
+    - cd .ci
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - IMAGE_TIMESTAMP=$(date "+%Y%m%d_%H%M%S" --utc)
+    - >
+      docker build
+      -t $CI_REGISTRY_IMAGE/ci-build:$IMAGE_TIMESTAMP-$CI_COMMIT_SHORT_SHA
+      -t $CI_REGISTRY_IMAGE/ci-build:latest
+      .
+    - docker push --all-tags $CI_REGISTRY_IMAGE/ci-build
+  rules:
+    - changes:
+        paths:
+          - .ci/Dockerfile
+        compare_to: $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - .ci/Dockerfile
+  timeout: 3 hours  # Should take less than 1.5 hours
+
+
+.build: &build_base
+  image: $CI_REGISTRY_IMAGE/ci-build
+  stage: build
   cache:
     paths:
-      - "build/"
+      - build_*
+
+Windows32:
+  <<: *build_base
+  script:
+    - .ci/tasks.sh build-win32
+  artifacts:
+    paths:
+      - build_win32/*.dll
+
+Linux32:
+  <<: *build_base
+  script:
+    - .ci/tasks.sh build-linux32
+  artifacts:
+    paths:
+      - build_linux32/*.so
+      - build_linux32/avs

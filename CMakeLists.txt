@@ -5,6 +5,11 @@ project(vis_avs VERSION 2.82)
 include(CheckIncludeFiles)
 include(CheckLinkerFlag)
 include(ExternalProject)
+include(FindPkgConfig)
+include(utils.cmake)
+
+ensure_platform_vars()
+ensure_compiler_vars()
 
 file(GLOB SRC_FILES_EEL2
     avs/3rdparty/WDL-EEL2/eel2/nseel-*.c
@@ -60,7 +65,7 @@ elseif(LINUX)
     )
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+if(MSVC)
     add_compile_options(
         /W4                 # Warning level 4 (maximum)
         /wd4458             # Ignore warning about overriding member with local
@@ -78,7 +83,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
                             # a backwards-compatible "199711L".
                             # https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
     )
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+elseif(GCC)
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "8.0.0")
         message(SEND_ERROR
             "need GCC version >=8, for naked-function support for x86 target")
@@ -133,8 +138,11 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")  # Remove "lib" prefix from output to get or
                                      # filename "vis_avs.dll".
 
 add_library(avs_eel OBJECT ${SRC_FILES_EEL2})
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(avs_eel PRIVATE -masm=att)
+if(GCC)
+    target_compile_options(avs_eel PRIVATE
+        -masm=att           # EEL2 uses AT&T syntax for inline assembly.
+        -w                  # No warnings for code we don't control.
+    )
 endif()
 add_library(avs_common OBJECT ${SRC_FILES_AVS_COMMON})
 
@@ -143,13 +151,11 @@ add_library(libavs SHARED
     $<TARGET_OBJECTS:avs_common>
 )
 
-check_include_files(
-    "libavcodec/avcodec.h;libavformat/avformat.h;libswscale/swscale.h"
-    HAVE_FFMPEG
-)
-if(NOT HAVE_FFMPEG OR NO_FFMPEG)
+pkg_search_include_dirs_with_64bit_fallback(FFMPEG "libavcodec;libavformat;libswscale" "video")
+if(NOT FFMPEG_INCLUDE_DIRS OR NO_FFMPEG)
     add_compile_definitions(NO_FFMPEG)
-    message(WARNING "FFmpeg headers not found. Building without video support!")
+else()
+    include_directories(${FFMPEG_INCLUDE_DIRS})
 endif()
 
 if(WIN32)
@@ -167,10 +173,10 @@ if(WIN32)
     )
     target_compile_definitions(vis_avs PUBLIC CAN_TALK_TO_WINAMP)
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    if(MSVC)
         check_linker_flag(C "/NXCOMPAT:NO" HAS_DISABLE_NXCOMPAT)
         set(NXCOMPAT_DISABLED_FLAG "/NXCOMPAT:NO")
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    elseif(GCC)
         check_linker_flag(C "-Wl,--disable-nxcompat" HAS_DISABLE_NXCOMPAT)
         set(NXCOMPAT_DISABLED_FLAG "-Wl,--disable-nxcompat")
     endif()
@@ -206,7 +212,7 @@ if(WIN32)
     endif()
 
     #[[
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(GCC)
         # These dependent DLLs are introduced by mingw32 and should be next to winamp.exe.
         configure_file(${CROSS_CC_PREFIX}/bin/libgcc_s_dw2-1.dll    . COPYONLY)
         configure_file(${CROSS_CC_PREFIX}/bin/libssp-0.dll          . COPYONLY)
@@ -218,14 +224,17 @@ if(WIN32)
     if(NOT MSVC)
         # googletest here because it doesn't work for MSVC
     endif()
-    set(AVS_DYLIB_EXTENSION "dll")
 elseif(LINUX)
-    include(FindPkgConfig)
-    pkg_search_module(PIPEWIRE REQUIRED libpipewire-0.3)
-    target_include_directories(avs_common PUBLIC ${PIPEWIRE_INCLUDE_DIRS})
-    target_link_libraries(libavs uuid)
-    target_link_options(libavs PUBLIC -Wl,-m elf_i386)
-    set(AVS_DYLIB_EXTENSION "so")
+    pkg_search_include_dirs_with_64bit_fallback(PIPEWIRE "libpipewire-0.3" "internal audio")
+    if(NOT PIPEWIRE_INCLUDE_DIRS OR NO_PIPEWIRE)
+        add_compile_definitions(NO_PIPEWIRE)
+    else()
+        include_directories(${PIPEWIRE_INCLUDE_DIRS})
+    endif()
+    pkg_search_module(UUID REQUIRED uuid)
+    target_link_libraries(libavs ${UUID_LIBRARIES})
+    include_directories(avs_common PRIVATE ${UUID_INCLUDE_DIRS})
+    target_link_options(avs_common PUBLIC -Wl,-m elf_i386)
     add_executable(avs-cli avs/avs-cli.c)
     target_link_libraries(avs-cli libavs)
 endif()
@@ -233,7 +242,7 @@ endif()
 
 # Rust
 if(WIN32)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    if(MSVC)
         set(RUST_TARGET "i686-pc-windows-msvc")
     else()
         set(RUST_TARGET "i686-pc-windows-gnu")

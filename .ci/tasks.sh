@@ -7,10 +7,17 @@ shopt -s globstar # Enable ** globbing
 # mean the build failed.
 GIT_BISECT_CANNOT_CHECK=125
 
+# If sudo is not installed, this usually means we're running in a container or CI
+# environment and are root already.
+SUDO=sudo
+if ! command $SUDO -V &> /dev/null; then
+    SUDO=""
+fi
+
 function clean() {
-    rm -r build_win32
-    rm -r build_linux32
-    rm -r target
+    rm -rf build_win32
+    rm -rf build_linux32
+    rm -rf target
 }
 
 function check_clang_format() {
@@ -33,6 +40,10 @@ function check_clang_format() {
 }
 
 function build_win32() {
+    verbose=${1:-}
+    if [ "$verbose" == "verbose" ]; then
+        _verbose="VERBOSE=1"
+    fi
     build_dir=build_win32
     mkdir -p "$build_dir"
     pushd "$build_dir" || return 1
@@ -42,7 +53,8 @@ function build_win32() {
         cmake -DCMAKE_TOOLCHAIN_FILE=CMake-MingWcross-toolchain.txt .. \
             || return $GIT_BISECT_CANNOT_CHECK
     fi
-    make -k -j "$parallel" all
+    # shellcheck disable=SC2086  # $_verbose should be omitted if empty
+    make -k -j "$parallel" $_verbose all || return 1
     popd || return 1
 }
 
@@ -53,13 +65,22 @@ function run_winamp() {
     winamp_dir=$1
     cp build_win32/vis_avs.dll "$winamp_dir/Plugins/"
     export WINEARCH=win32
-    wine "$winamp_dir/winamp.exe"
+    wine "$winamp_dir/winamp.exe" || return 1
 }
 
 function build_linux32() {
+    verbose=${1:-}
+    if [ "$verbose" == "verbose" ]; then
+        _verbose="VERBOSE=1"
+    fi
     build_dir=build_linux32
-    cmake -B "$build_dir" --toolchain CMake-Linux32cross-toolchain.txt || return 1
-    cmake --build "$build_dir" --parallel "$parallel"
+    mkdir -p "$build_dir"
+    pushd "$build_dir" || return 1
+    cmake -DCMAKE_TOOLCHAIN_FILE=CMake-Linux32cross-toolchain.txt .. \
+        || return $GIT_BISECT_CANNOT_CHECK
+    # shellcheck disable=SC2086  # $_verbose should be omitted if empty
+    make -k -j "$parallel" $_verbose || return 1
+    popd || return 1
 }
 
 function run_c_cli() {
@@ -68,23 +89,90 @@ function run_c_cli() {
     fi
     build_dir=build_linux32
     export LD_LIBRARY_PATH=$build_dir
-    "$build_dir/avs-cli" "$1"
+    "$build_dir/avs-cli" "$1" || return 1
 }
 
 function run_rust_cli() {
     if [ ! -e build_linux32/libavs.so ]; then
         build_linux32 || return
     fi
+    if [ "$1" == "nobuild" ]; then
+        shift
+        no_build=1
+    fi
     build_dir=build_linux32
     export RUST_BACKTRACE=${RUST_BACKTRACE:-1}
     export RUSTFLAGS="-L $build_dir -l avs"
     export LD_LIBRARY_PATH=$build_dir
     export PKG_CONFIG_SYSROOT_DIR=/usr/lib32/
-    cargo run \
-        --bin avs-cli \
-        --target i686-unknown-linux-gnu \
-        -- \
-        "$1"
+    if [ "$no_build" -eq 1 ] \
+            && [ -e target/i686-unknown-linux-gnu/debug/avs-cli ]; then
+        target/i686-unknown-linux-gnu/debug/avs-cli "$@"
+    else
+        cargo run \
+            --bin avs-cli \
+            --target i686-unknown-linux-gnu \
+            -- \
+            "$@"
+    fi
+}
+
+function install_deps() {
+    distro=${1:-}
+    if [[ $distro == "arch" || $distro == "archlinux" ]]; then
+        if ! command -v yay &> /dev/null; then
+            echo "Error: 'yay' is used for Arch Linux dependency installation."
+            echo "Edit the script to use another AUR helper if desired."
+            exit 1
+        fi
+        yay -Sy --noconfirm --needed \
+            base-devel \
+            cmake \
+            clang \
+            mingw-w64-cmake \
+            mingw-w64-gcc \
+            mingw-w64-ffmpeg-minimal \
+            lib32-util-linux \
+            lib32-libpipewire \
+            lib32-ffmpeg-minimal-dev \
+            #
+    elif [[ $distro == "ubuntu" || $distro == "debian" ]]; then
+        $SUDO apt-get update
+        $SUDO apt-get install -y --no-install-recommends \
+            cmake pkg-config mingw-w64 gcc-multilib g++-multilib \
+            autoconf gettext flex bison libtool autopoint \
+            libavformat-dev libavcodec-dev libswscale-dev \
+            libpipewire-0.3-dev \
+            #
+    fi
+}
+
+function build_libuuid_32bit() {
+    install=${1:-}
+    tmpclone=$(mktemp -d)
+    git clone \
+        https://git.kernel.org/pub/scm/utils/util-linux/util-linux.git \
+        "$tmpclone" \
+        --depth=1
+    pushd "$tmpclone" || return 1
+    # requires: autoconf gettext flex bison libtool autopoint
+    ./autogen.sh
+    configure_flags=(
+        --host=i686-linux-gnu
+        "CFLAGS=-m32"
+        "CXXFLAGS=-m32"
+        "LDFLAGS=-m32"
+        # Some older platforms may complain about missing "wide time_t" support on 32bit
+        --disable-year2038
+        --libdir=/usr/lib32/
+        --disable-all-programs
+        --enable-libuuid
+    )
+    ./configure "${configure_flags[@]}"
+    make -j "$parallel"
+    if [[ "$install" == "install" ]]; then
+        $SUDO make install
+    fi
 }
 
 task=$1
@@ -93,47 +181,59 @@ shift
 parallel=${JOBS:-$(nproc --ignore=1)}
 case $task in
     "build-win32")
-        (build_win32)
+        (build_win32 "$1")
         ;;
     "run-winamp")
         (run_winamp "$1")
         ;;
     "build-linux32")
-        (build_linux32)
+        (build_linux32 "$1")
         ;;
     "run-c-cli")
         (run_c_cli "$1")
         ;;
     "run-rust-cli")
-        (run_rust_cli "$1")
+        (run_rust_cli "$@")
         ;;
     "check-clang-format")
         (check_clang_format "$1")
         ;;
     "all-checks")
         (echo -n "clang-format " ; check_clang_format &> /dev/null && echo ✓ || echo ✗) \
-            && (echo -n "build_win32 " ; build_win32 &> /dev/null && echo ✓ || echo ✗) \
-            && (echo -n "build_linux32 " ; build_linux32 &> /dev/null && echo ✓ || echo ✗)
+            && (echo -n "build_win32 " ; build_win32 "$1" &> /dev/null && echo ✓ || echo ✗) \
+            && (echo -n "build_linux32 " ; build_linux32 "$1" &> /dev/null && echo ✓ || echo ✗)
         ;;
     "clean")
         (clean)
+        ;;
+    "install-deps")
+        (install_deps "$1")
+        ;;
+    "build-libuuid-32bit")
+        (build_libuuid_32bit "$1")
         ;;
     *)
         echo "Usage: $0 TASK"
         echo
         echo "Tasks:"
-        echo "    build-win32"
+        echo "    build-win32 [verbose]"
         echo "    run-winamp <winamp-dir>"
-        echo "    build-linux32"
+        echo "    build-linux32 [verbose]"
         echo "    run-rust-cli <preset>"
         echo "    check-clang-format [dump]"
-        echo "    all-checks"
+        echo "    all-checks [verbose]"
         echo "    clean"
+        echo "    install-deps [arch|ubuntu|debian]"
+        echo "    build-libuuid-32bit [install] (only needed on debian/ubuntu)"
+        echo "        run 'install-deps' or install"
+        echo "            autoconf autopoint gettext flex bison libtool"
+        echo "        before running this task"
         echo
         echo "Env vars:"
         echo "    JOBS - Number of parallel jobs to run."
         echo "           Defaults to nproc - 1"
         echo "    WINEPREFIX - Wine prefix to use for Winamp."
         echo "                 Defaults to ~/.wine and will fail if that's 64bit!"
+        exit 1
         ;;
 esac || exit
