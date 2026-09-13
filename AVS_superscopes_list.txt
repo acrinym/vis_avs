@@ -304,3 +304,98 @@ Frame: t=t+0.02; freq=174+789*frac(t/10);
 Beat:
 Point: r=i*$PI*2; d=0.35+0.05*sin(freq*t+r*freq); x=cos(r)*d; y=sin(r)*d; red=0.5+0.5*sin(r*freq); green=0.5+0.5*sin(r*freq+2.094); blue=0.5+0.5*sin(r*freq+4.188); linesize=1;
 
+## Tornado
+Init: n=1500; t=0;
+Frame: t=t-0.04;
+Beat:
+Point: h=i*2; rad=h*0.4*(1+0.1*sin(t*2+h*10)); ang=i*40-t*10; x3d=cos(ang)*rad; z3d=sin(ang)*rad; y3d=h-1.2; x3d=x3d+(rand(100)/50-1)*0.08*h; y3d=y3d+(rand(100)/50-1)*0.08*h; persp=1/(z3d+2); x=x3d*persp; y=y3d*persp; dust=0.2+h*0.15+v*0.1; red=dust; green=dust*0.9; blue=dust*0.8; red=if(b,red+0.4,red); green=if(b,green+0.4,green); blue=if(b,blue+0.5,blue);
+
+## Ocean Waves
+Init: n=2500; t=0;
+Frame: t=t+0.015;
+Beat:
+Point: grid_w=50; grid_x=floor(i*n)%grid_w; grid_y=floor(floor(i*n)/grid_w); u=grid_x/(grid_w-1); vc=grid_y/(grid_w-1); x3d=u*2-1; z3d=vc*2; w1=sin(u*15+t*3)*0.1; w2=sin(vc*10+t*2)*0.15; w3=sin(u*30+vc*20+t)*0.05; y3d=w1+w2+w3; p=1/(z3d+1); x=x3d*p; y=y3d*p; c=0.1+(y3d+0.2)*2; foam=pow(max(0,y3d),2)*5; red=c*0.2+foam+v*0.1; green=c*0.6+foam+v*0.1; blue=c+foam+v*0.1;
+
+## Rainbow Volume Bars
+Init: num_bars=32; num_v_segs=30; n=num_bars*num_v_segs; t=0; beat_h=0;
+Frame: t=t+0.01; beat_h=beat_h*0.9;
+Beat: beat_h=1;
+Point: bar_idx=floor(i*num_bars); bar_i=(i*n)%num_v_segs/(num_v_segs-1); x=(bar_idx/(num_bars-1))*1.8-0.9; h=max(0,v*0.8+beat_h*0.6)*(sin(bar_idx*0.4+t)*0.3+0.7); skip=if(bar_i>h,1,0); y=bar_i*1.8-0.9; hue=bar_idx/num_bars*0.5+t*0.1; red=0.5+0.5*sin(hue*6.283); green=0.5+0.5*sin(hue*6.283+2.094); blue=0.5+0.5*sin(hue*6.283+4.188);
+
+## Flying Toasters
+Init: n=300; t=0; tx1=-1.5; ty1=0.3; vx1=0.02; vy1=0.005; a1=0; va1=0.05; tx2=-1.8; ty2=-0.2; vx2=0.025; vy2=-0.003; a2=0; va2=-0.03; tx3=-2.2; ty3=0.5; vx3=0.015; vy3=0.008; a3=0; va3=0.02;
+Frame: tx1+=vx1; ty1+=vy1; a1+=va1; if(tx1>1.2, tx1=-1.2; ty1=rand(200)/100-1); if(abs(ty1)>1, vy1=-vy1); tx2+=vx2; ty2+=vy2; a2+=va2; if(tx2>1.2, tx2=-1.2; ty2=rand(200)/100-1); if(abs(ty2)>1, vy2=-vy2); tx3+=vx3; ty3+=vy3; a3+=va3; if(tx3>1.2, tx3=-1.2; ty3=rand(200)/100-1); if(abs(ty3)>1, vy3=-vy3);
+Beat:
+Point: tidx=floor(i*3); p=i*3-tidx; itst=p>0.6; pn=if(itst,(p-0.6)/0.4,p/0.6); gw=10; gh=10; px=(floor(pn*100)%gw)/(gw-1); py=floor(floor(pn*100)/gw)/(gh-1); ctx=if(tidx==0,tx1,if(tidx==1,tx2,tx3)); cty=if(tidx==0,ty1,if(tidx==1,ty2,ty3)); ca=if(tidx==0,a1,if(tidx==1,a2,a3)); w=0.1; h=0.08; xr=(px-0.5)*w*2; yr=(py-0.5)*h*2; if(itst, wt=0.03; ht=0.05; xr=(px-0.5)*wt*2; yr=(py-0.5)*ht*2+h); xf=ctx+xr*cos(ca)-yr*sin(ca); yf=cty+xr*sin(ca)+yr*cos(ca); x=xf; y=yf; red=if(itst,0.6,0.7); green=if(itst,0.4,0.7); blue=if(itst,0.2,0.8);
+
+## Morphing Intersected Squares
+Init: n=80; t=0; drawmode=1; linesize=2;
+Frame: t=t+0.01; r1=t*1.5; r2=t*-1.2; s1=0.3+sin(t*0.8)*0.1; s2=0.3+cos(t*0.9)*0.1;
+Beat: s1+=0.1; s2+=0.1;
+Point: sqi=floor(i*2); p=i*2-sqi; seg=floor(p*4); sp=p*4-seg; cr=if(sqi==0,r1,r2); cs=if(sqi==0,s1,s2); xr=if(seg==0,sp*2-1,if(seg==1,1,if(seg==2,1-sp*2,-1))); yr=if(seg==0,-1,if(seg==1,sp*2-1,if(seg==2,1,1-sp*2))); xs=xr*cs; ys=yr*cs; x_rot=xs*cos(cr)-ys*sin(cr); y_rot=xs*sin(cr)+ys*cos(cr); orad=0.2; oang=t*0.5; cx=sin(oang)*orad*if(sqi==0,1,-1); cy=cos(oang)*orad*if(sqi==0,1,-1); x=x_rot+cx; y=y_rot+cy; hue=sqi*0.5+t*0.1; red=0.5+0.5*sin(hue*6.283); green=0.5+0.5*sin(hue*6.283+2.094); blue=0.5+0.5*sin(hue*6.283+4.188);
+
+## Organic Tunnels
+Init: n=2000; t=0;
+Frame: t=t+0.005;
+Beat:
+Point: d=i*0.8; r=i*20+t*5; x0=cos(r)*d; y0=sin(r)*d; dx1=sin(y0*10+t)*0.1; dy1=cos(x0*10-t)*0.1; dx2=sin(x0*5-t*2)*0.05; dy2=cos(y0*5+t*2)*0.05; x=x0+dx1+dx2; y=y0+dy1+dy2; zm=0.8+sin(t*0.2)*0.1; x=x*zm+sin(t*0.3)*0.1; y=y*zm+cos(t*0.4)*0.1; hue=i*0.5+t*0.1; red=0.5+0.5*sin(hue*6.283)+v*0.2; green=0.5+0.5*sin(hue*6.283+2.094)+v*0.2; blue=0.5+0.5*sin(hue*6.283+4.188)+v*0.2;
+
+## Digital Rain
+Init: ns=60; nd=30; n=ns*nd; t=0; bh=0;
+Frame: t=t+0.5; bh=bh*0.9;
+Beat: bh=1;
+Point: si=floor(i*ns); di=floor(i*n)%nd; x=(si/(ns-1))*2.2-1.1; spd=(sin(si*0.31)+1)*0.5+0.2; yb=1.2-(t*spd*0.02+sin(si*0.5)*2)%2.4; y=yb-(di/nd)*0.5; skip=if(abs(y)>1,1,0); il=di==0; g=if(il,1,0.1+(nd-di)/nd*0.7); red=bh*g; green=g+bh*g; blue=bh*g;
+
+## Beat Jugglers
+Init: max_b=5; n=max_b*40; t=0; bh=0;
+Frame: t=t+0.025; bh=bh*0.92;
+Beat: bh=1;
+Point: bi=floor(i*max_b); p=i*max_b-bi; nb=3+floor(bh*2.9); skip=if(bi>=nb,1,0); pt=t*3+bi*6.283/nb; px=sin(pt)*0.6; py=sin(pt*2)*0.3-0.4; pa=p*6.283; br=0.07; x=px+cos(pa)*br; y=py+sin(pa)*br; hue=bi/max_b; red=0.5+0.5*sin(hue*6.283)+v*0.2; green=0.5+0.5*sin(hue*6.283+2.094)+v*0.2; blue=0.5+0.5*sin(hue*6.283+4.188)+v*0.2;
+
+## Black Hole Sand
+Init: n=3000; t=0; bh=0;
+Frame: t=t+0.01; bh=bh*0.94;
+Beat: bh=1;
+Point: pid=i*500; sa=pid*0.2; spd=(sin(pid*0.3)+1)*0.02+0.01; r=1.2-(t*spd+sin(pid)*1.2)%1.2; r=r+bh*0.4*(1.2-r)/1.2; ang=sa+(1.2-r)*15; x=cos(ang)*r; y=sin(ang)*r; br=0.2+(1.2-r)/1.2*0.8; red=br*0.9+bh*0.2; green=br*0.7+bh*0.2; blue=br*0.4+bh*0.2;
+
+## Static and Obey
+Init: n=5000; t=0; bh=0;
+Frame: t=t+0.03; bh=bh*0.9;
+Beat: bh=1;
+Point: x=rand(200)/100-1; y=rand(200)/100-1; it=0; if(abs(x+0.6)<0.15&&abs(y)<0.15,it=1); if(abs(x+0.6)<0.1&&abs(y)<0.1,it=0); if(abs(x+0.2)<0.15&&abs(y)<0.15,it=1); if(x>-0.2&&abs(y-0.075)<0.05,it=0); if(x>-0.2&&abs(y+0.075)<0.05,it=0); if(abs(x-0.2)<0.15&&abs(y)<0.15,it=1); if(x>0.2&&abs(y-0.075)<0.05,it=0); if(x>0.2&&abs(y+0.075)<0.05,it=0); if(abs(x-0.6)<0.03&&y<0&&y>-0.15,it=1); if(abs(x-0.6-y*0.5)<0.03&&y>0&&y<0.15,it=1); if(abs(x-0.6+y*0.5)<0.03&&y>0&&y<0.15,it=1); c=if(it,1,rand(100)/100*(1-bh)); if(it,x+=sin(y*20+t*5)*bh*0.1;y-=sin(x*20+t*5)*bh*0.1); red=c; green=c; blue=c;
+
+## Red Brick Labyrinth
+Init: gs=20; n=gs*gs*20; t=0; bh=0; drawmode=1; linesize=3;
+Frame: t=t+0.02; bh=bh*0.9;
+Beat: bh=1;
+Point: ci=floor(i*gs*gs); cx=ci%gs; cy=floor(ci/gs); p=i*gs*gs-ci; rv=sin(cx*1.2+cy*3.4+t*0.5+bh*2); d1=frac(rv*10)>0.5; if(d1,xr=p;yr=1-p,xr=p;yr=p); cw=1.8/gs; x=(cx+xr)*cw-0.9; y=(cy+yr)*cw-0.9; red=0.6+bh*0.3; green=0.2; blue=0.1;
+
+## Colourful Tessellations
+Init: gw=12; gh=12; n=gw*gh*60; t=0; bh=0; drawmode=1; linesize=2;
+Frame: t=t+0.01; bh=bh*0.9;
+Beat: bh=1;
+Point: ci=floor(i*gw*gh); cx_r=ci%gw; cy_r=floor(ci/gw); p=i*gw*gh-ci; cx=cx_r+0.5*(cy_r%2); cy=cy_r*0.866; seg=floor(p*6); ps=p*6-seg; a1=seg*1.047; a2=(seg+1)*1.047; x1=cos(a1); y1=sin(a1); x2=cos(a2); y2=sin(a2); xr=x1+(x2-x1)*ps; yr=y1+(y2-y1)*ps; s=(0.15+v*0.02)*(1+bh*0.2); x=(cx*1.05+xr*0.5)*s-1.0; y=(cy*1.05+yr*0.5)*s-1.0; hue=cx/gw+cy/gh+t*0.2; red=0.5+0.5*sin(hue*6.283); green=0.5+0.5*sin(hue*6.283+2.094); blue=0.5+0.5*sin(hue*6.283+4.188);
+
+## Bouboule Starfield
+Init: n=200; t=0; bh=0; xa=rand(3142)/1000; xs=3.14/(rand(100)+100); xmin=w/4; xmax=w*3/4; ya=rand(3142)/1000; ys=3.14/(rand(100)+100); ymin=h/4; ymax=h*3/4; za=rand(3142)/1000; zs=3.14/(rand(100)+100); zmin=w/2+100; zmax=w/2+10000; sxa=rand(3142)/1000; sxs=3.14/(rand(100)+100); sxmin=w/10; sxmax=w/2; sya=rand(3142)/1000; sys=3.14/(rand(100)+100); symin=h/10; symax=h/2; txa=rand(3142)/1000; txs=3.14/(rand(200)+200); txmin=-3.14; txmax=3.14; tya=rand(3142)/1000; tys=3.14/(rand(200)+200); tymin=-3.14; tymax=3.14; tza=rand(3142)/1000; tzs=3.14/(rand(400)+400); tzmin=-3.14; tzmax=3.14;
+Frame: t=t+0.02; bh=bh*0.9; xa+=xs; ya+=ys; za+=zs; sxa+=sxs; sya+=sys; txa+=txs+bh*0.1; tya+=tys+bh*0.1; tza+=tzs+bh*0.1; xv=xmin+(xmax-xmin)*(sin(xa)+1)/2; yv=ymin+(ymax-ymin)*(sin(ya)+1)/2; zv=zmin+(zmax-zmin)*(sin(za)+1)/2; sxv=sxmin+(sxmax-sxmin)*(sin(sxa)+1)/2; syv=symin+(symax-symin)*(sin(sya)+1)/2; txv=txmin+(txmax-txmin)*(sin(txa)+1)/2; tyv=tymin+(tymax-tymin)*(sin(tya)+1)/2; tzv=tzmin+(tzmax-tzmin)*(sin(tza)+1)/2;
+Beat: bh=1;
+Point: pid=i*100; th=(sin(pid)*90-90)*0.0174; om=(sin(pid*1.3)*180-180)*0.0174; starx=cos(th)*sin(om); stary=sin(om)*sin(th); starz=cos(om); cx=cos(txv); sxr=sin(txv); cy=cos(tyv); syr=sin(tyv); cz=cos(tzv); szr=sin(tzv); rx=(cy*cz-sxr*syr*szr)*starx+(-cx*szr)*stary+(syr*cz+szr*sxr*cy)*starz; ry=(cy*szr+sxr*syr*cz)*starx+(cx*cz)*stary+(syr*szr-sxr*cy*cz)*starz; rz=(-syr*cx)*starx+(sxr)*stary+(cx*cy)*starz; px=xv+rx*sxv; py=yv+ry*syv; pz=zv+rz*sxv; persp=2000/(pz+2000); x=(px-w/2)*persp+w/2; y=(py-h/2)*persp+h/2; x=x/w*2-1; y=y/h*2-1; c=persp*0.8; red=c; green=c; blue=c;
+
+## Circle Braid
+Init: ns=6; n=ns*100; t=0; bh=0; drawmode=1; linesize=2;
+Frame: t=t+0.02; bh=bh*0.9;
+Beat: bh=1;
+Point: si=floor(i*ns); p=i*ns-si; a=p*6.283*2; r0=0.6; wf=7; wa=0.15*(1+bh*0.5); r=r0+sin(a*wf+si*1.047+t*3)*wa; x=cos(a)*r; y=sin(a)*r; hue=a/(6.283*2)+t*0.1; red=0.5+0.5*sin(hue*6.283); green=0.5+0.5*sin(hue*6.283+2.094); blue=0.5+0.5*sin(hue*6.283+4.188);
+
+## C-Curve Fractal
+Init: n=8000; t=0; bh=0;
+Frame: t=t+0.01; bh=bh*0.9;
+Beat: bh=1;
+Point: px=sin(i*123);py=cos(i*789); c=rand(100)>50;tx=px;if(c,px=0.5*(tx-py);py=0.5*(tx+py));if(!c,px=0.5*(tx+py)+0.5;py=0.5*(-tx+py)+0.5); c=rand(100)>50;tx=px;if(c,px=0.5*(tx-py);py=0.5*(tx+py));if(!c,px=0.5*(tx+py)+0.5;py=0.5*(-tx+py)+0.5); c=rand(100)>50;tx=px;if(c,px=0.5*(tx-py);py=0.5*(tx+py));if(!c,px=0.5*(tx+py)+0.5;py=0.5*(-tx+py)+0.5); c=rand(100)>50;tx=px;if(c,px=0.5*(tx-py);py=0.5*(tx+py));if(!c,px=0.5*(tx+py)+0.5;py=0.5*(-tx+py)+0.5); x=px*2-1.5;y=py*2-1.5;s=1+bh*0.2;x*=s;y*=s;hue=i+t*0.1;red=0.5+0.5*sin(hue*6.283);green=0.5+0.5*sin(hue*6.283+2.094);blue=0.5+0.5*sin(hue*6.283+4.188);
+
+## Crystal Symmetries
+Init: gw=8; gh=8; nm=10; n=gw*gh*nm*2; t=0; bh=0; drawmode=1; linesize=2;
+Frame: t=t+0.01; bh=bh*0.9;
+Beat: bh=1;
+Point: ci=floor(i*gw*gh);cx=ci%gw;cy=floor(ci/gw);p=i*gw*gh-ci;is_c=p>0.5;pm=if(is_c,(p-0.5)*2,p*2);seg=floor(pm*3);ps=pm*3-seg;xr=0;yr=0;if(seg==0,xr=ps*0.3;yr=0);if(seg==1,xr=0.3-ps*0.2;yr=ps*0.2);if(seg==2,xr=0.1;yr=0.2-ps*0.2);if(is_c,xr=-xr;yr=-yr);a=t*2+(cx+cy)*0.5;rx=xr*cos(a)-yr*sin(a);ry=xr*sin(a)+yr*cos(a);cw=2.0/gw;x=(cx+rx)*cw-1;y=(cy+ry)*cw-1;hue=cx/gw+cy/gh+t*0.1;red=0.5+0.5*sin(hue*6.283)+bh*0.3;green=0.5+0.5*sin(hue*6.283+2.094);blue=0.5+0.5*sin(hue*6.283+4.188);
